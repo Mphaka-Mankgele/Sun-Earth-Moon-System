@@ -11,7 +11,7 @@ public:
     OpenGLWindow();
 
     void initGL();
-    void render();
+    void render(float a, float b);
     bool handleEvent(SDL_Event e);
     void cleanup();
 

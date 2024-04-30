@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "glwindow.h"
 #include "geometry.h"
+#include <math.h>
 
 using namespace std;
 
@@ -141,6 +142,14 @@ void OpenGLWindow::initGL()
     glCullFace(GL_BACK);
     glClearColor(0,0,0,1);
 
+    
+    
+    
+}
+
+void OpenGLWindow::render(float a, float b)
+{
+
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -166,9 +175,9 @@ void OpenGLWindow::initGL()
 
     // Define positions and colors for three instances
     std::vector<glm::vec3> positions = {
-        glm::vec3(0.0f, 0.0f, -0.5f),
-        glm::vec3(2.5f, 0.0f, -0.5f),
-        glm::vec3(3.5f, 0.0f, -0.5f)
+        glm::vec3(0.0f, 0.0f, -1.0f),
+        glm::vec3(2.3f*cos(glm::radians(b)), 2.3f*sin(glm::radians(b)), -1.0f),
+        glm::vec3(2.3f*cos(glm::radians(b)) + 0.7f*cos(glm::radians(a)), 2.3f*sin(glm::radians(b)) + 0.7f*sin(glm::radians(a)), -1.0f)
     };
 
     std::vector<glm::vec3> colors = {
@@ -191,8 +200,10 @@ void OpenGLWindow::initGL()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     for (int i = 0; i < positions.size(); ++i) {
+
         std::vector<glm::vec3> transformedVertices;
         transformedVertices.reserve(geometry.vertexCount());
+
         // Calculate the model matrix for each instance
         glm::mat4 model = glm::translate(glm::mat4(1.0f), positions[i]);
         model = glm::scale(model, scales[i]);
@@ -217,14 +228,9 @@ void OpenGLWindow::initGL()
         glEnableVertexAttribArray(vertexLoc);       
         
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-        glPrintError("Setup complete", true);
+        // glPrintError("Setup complete", true);
     }
-    
-    
-}
 
-void OpenGLWindow::render()
-{
     // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // Swap the front and back buffers on the window, effectively putting what we just "drew"

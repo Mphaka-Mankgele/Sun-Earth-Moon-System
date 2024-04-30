@@ -20,11 +20,14 @@ int SDL_main(int argc, char** argv)
 
     OpenGLWindow window;
     window.initGL();
-    window.render();
+    
+    float beta = 0.0f, alpha = 0.0f;
+    float betaIncrement = 1.0f, alphaIncrement = 4.0f;
     bool running = true;
     while(running)
     {
         // Check for a quit event before passing to the GLWindow
+        
         SDL_Event e;
         while(SDL_PollEvent(&e))
         {
@@ -37,6 +40,12 @@ int SDL_main(int argc, char** argv)
                 running = false;
             }
         }
+        if(alpha == 360){
+            alpha = 0;
+        }
+        window.render(alpha, beta);
+        alpha += alphaIncrement;
+        beta += betaIncrement;
         
 
         // We sleep for 10ms here so as to prevent excessive CPU usage
