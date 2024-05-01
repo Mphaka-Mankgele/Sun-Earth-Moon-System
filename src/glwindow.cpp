@@ -11,6 +11,8 @@
 
 using namespace std;
 
+GeometryData geometry;
+
 const char* glGetErrorString(GLenum error)
 {
     switch(error)
@@ -143,7 +145,7 @@ void OpenGLWindow::initGL()
     glClearColor(0,0,0,1);
 
     
-    
+    geometry.loadFromOBJFile("sphere-fixed.obj");
     
 }
 
@@ -160,20 +162,20 @@ void OpenGLWindow::render(float a, float b)
     glUseProgram(shader);
 
     // Calculate the projection matrix (perspective projection)
-    float fov = glm::radians(145.0f); // convert FOV to radians
-    float aspectRatio = 4.0f/3.0f; // assuming a square window
+    float fov = glm::radians(145.0f);
+    float aspectRatio = 4.0f/3.0f; 
     float nearPlane = 0.1f;
     float farPlane = 100.0f;
-    glm::mat4 projection = glm::perspective(fov, aspectRatio, nearPlane, farPlane);
+    glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, nearPlane, farPlane);
     
     // Load the model that we want to use and buffer the vertex attributes
-    GeometryData geometry;
-    geometry.loadFromOBJFile("sphere-fixed.obj");
+    
+    
     vertexCount = geometry.vertexCount();
     // Get the location of the "position" attribute in the shader
     GLuint vertexLoc = glGetAttribLocation(shader, "position");
 
-    // Define positions and colors for three instances
+    // Positions for the Sun, Earth, and Moon respectively.
     std::vector<glm::vec3> positions = {
         glm::vec3(0.0f, 0.0f, -1.0f),
         glm::vec3(2.3f*cos(glm::radians(b)), 2.3f*sin(glm::radians(b)), -1.0f),
@@ -181,15 +183,15 @@ void OpenGLWindow::render(float a, float b)
     };
 
     std::vector<glm::vec3> colors = {
-        glm::vec3(1.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f),
-        glm::vec3(0.5f, 0.5f, 0.5f)
+        glm::vec3(1.0f, 1.0f, 0.0f),    // Color of the Sun
+        glm::vec3(0.0f, 0.0f, 1.0f),    // Color of the Earth
+        glm::vec3(0.5f, 0.5f, 0.5f)     // Color of the Moon
     };
 
     std::vector<glm::vec3> scales = {
-    glm::vec3(0.7f, 0.7f, 0.7f),
-    glm::vec3(0.3f, 0.3f, 0.3f),  // Scale factor for the first object
-    glm::vec3(0.1f, 0.1f, 0.1f),  // Scale factor for the second object  
+    glm::vec3(0.7f, 0.7f, 0.7f),    // Scale factor for the Sun
+    glm::vec3(0.3f, 0.3f, 0.3f),    // Scale factor for the Earth
+    glm::vec3(0.1f, 0.1f, 0.1f),    // Scale factor for the Moon 
     };
 
     glGenBuffers(1, &vertexBuffer);
@@ -199,17 +201,18 @@ void OpenGLWindow::render(float a, float b)
     
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     for (int i = 0; i < positions.size(); ++i) {
 
         std::vector<glm::vec3> transformedVertices;
         transformedVertices.reserve(geometry.vertexCount());
 
         // Calculate the model matrix for each instance
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), positions[i]);
-        model = glm::scale(model, scales[i]);
+        glm::mat4 modelViewMatrix = glm::translate(glm::mat4(1.0f), positions[i]);
+        modelViewMatrix = glm::scale(modelViewMatrix, scales[i]);
 
         // Combine model, view, and projection matrices
-        glm::mat4 mvp = projection * model;
+        glm::mat4 modelViewProjection = projectionMatrix * modelViewMatrix;
 
         // Set the object color
         GLint colorLoc = glGetUniformLocation(shader, "objectColor");
@@ -218,7 +221,7 @@ void OpenGLWindow::render(float a, float b)
         // Transform and buffer the vertex positions       
         for (int j = 0; j < geometry.vertexCount(); ++j) {
             glm::vec4 vertexPosition(vertices[j * 3], vertices[j * 3 + 1], vertices[j * 3 + 2]*-0.01f, 1.0f);
-            glm::vec4 transformedPosition = mvp * vertexPosition;
+            glm::vec4 transformedPosition = modelViewProjection * vertexPosition;
             transformedVertices.push_back(glm::vec3(transformedPosition));
         }  
         
@@ -228,11 +231,10 @@ void OpenGLWindow::render(float a, float b)
         glEnableVertexAttribArray(vertexLoc);       
         
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-        // glPrintError("Setup complete", true);
-    }
-
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
+        
+    }   
+    // glPrintError("Setup complete", true);
+     
     // Swap the front and back buffers on the window, effectively putting what we just "drew"
     // onto the screen (whereas previously it only existed in memory)
     SDL_GL_SwapWindow(sdlWin);

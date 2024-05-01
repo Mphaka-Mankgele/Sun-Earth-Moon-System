@@ -23,7 +23,7 @@ int SDL_main(int argc, char** argv)
     
     float beta = 0.0f, alpha = 0.0f;
     float betaIncrement = 1.0f, alphaIncrement = 4.0f;
-    bool running = true;
+    bool running = true, pause = false;
     while(running)
     {
         // Check for a quit event before passing to the GLWindow
@@ -35,17 +35,48 @@ int SDL_main(int argc, char** argv)
             {
                 running = false;
             }
+            else if(e.type == SDL_KEYDOWN)
+            {
+                
+                switch(e.key.keysym.sym)
+                {
+                    case SDLK_UP:
+                        alphaIncrement += 2.0f;
+                        break;
+                    case SDLK_DOWN:
+                        alphaIncrement -= 2.0f; 
+                        break;
+                    case SDLK_LEFT:
+                        betaIncrement -= 1.0f;
+                        break;
+                    case SDLK_RIGHT:
+                        betaIncrement += 1.0f; 
+                        break;
+                    case SDLK_SPACE: 
+                        pause = !pause;
+                        break;
+                    case SDLK_s: 
+                        pause = true;
+                        break;
+                    case SDLK_r: 
+                        pause = false;
+                        break;
+                }
+            }
             else if(!window.handleEvent(e))
             {
                 running = false;
             }
+            
         }
-        if(alpha == 360){
-            alpha = 0;
+        betaIncrement = betaIncrement < 1.0f ? 1.0f : betaIncrement;
+        alphaIncrement = alphaIncrement <= betaIncrement ? 2.0f : alphaIncrement;
+        if(!pause) // Only update alpha and beta if animation is running
+        {            
+            window.render(alpha, beta);
+            alpha += alphaIncrement;
+            beta += betaIncrement;
         }
-        window.render(alpha, beta);
-        alpha += alphaIncrement;
-        beta += betaIncrement;
         
 
         // We sleep for 10ms here so as to prevent excessive CPU usage
