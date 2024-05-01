@@ -178,8 +178,8 @@ void OpenGLWindow::render(float a, float b)
     // Positions for the Sun, Earth, and Moon respectively.
     std::vector<glm::vec3> positions = {
         glm::vec3(0.0f, 0.0f, -1.0f),
-        glm::vec3(2.3f*cos(glm::radians(b)), 2.3f*sin(glm::radians(b)), -1.0f),
-        glm::vec3(2.3f*cos(glm::radians(b)) + 0.7f*cos(glm::radians(a)), 2.3f*sin(glm::radians(b)) + 0.7f*sin(glm::radians(a)), -1.0f)
+        glm::vec3(2.3f*cos(glm::radians(a)), 2.3f*sin(glm::radians(a)), -1.0f),
+        glm::vec3(2.3f*cos(glm::radians(a)) + 0.7f*cos(glm::radians(b)), 2.3f*sin(glm::radians(a)) + 0.7f*sin(glm::radians(b)), -1.0f)
     };
 
     std::vector<glm::vec3> colors = {
@@ -207,11 +207,11 @@ void OpenGLWindow::render(float a, float b)
         std::vector<glm::vec3> transformedVertices;
         transformedVertices.reserve(geometry.vertexCount());
 
-        // Calculate the model matrix for each instance
+        // Calculate the view model matrix for each instance
         glm::mat4 modelViewMatrix = glm::translate(glm::mat4(1.0f), positions[i]);
         modelViewMatrix = glm::scale(modelViewMatrix, scales[i]);
 
-        // Combine model, view, and projection matrices
+        // Combine view model and projection matrices
         glm::mat4 modelViewProjection = projectionMatrix * modelViewMatrix;
 
         // Set the object color
@@ -234,7 +234,7 @@ void OpenGLWindow::render(float a, float b)
         
     }   
     // glPrintError("Setup complete", true);
-     
+
     // Swap the front and back buffers on the window, effectively putting what we just "drew"
     // onto the screen (whereas previously it only existed in memory)
     SDL_GL_SwapWindow(sdlWin);
