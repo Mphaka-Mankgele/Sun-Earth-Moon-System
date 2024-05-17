@@ -1,5 +1,4 @@
 #include "SDL.h"
-
 #include "glwindow.h"
 
 // In order to make cross-platform development and deployment easy, SDL implements its own main
@@ -21,9 +20,10 @@ int SDL_main(int argc, char** argv)
     OpenGLWindow window;
     window.initGL();
     
-    float beta = 0.0f, alpha = 0.0f;
+    float beta = 0.0f, alpha = 0.0f, theta = 0.0f, phi = 0.0f;
     float betaIncrement = 4.0f, alphaIncrement = 1.0f;
     bool running = true, pause = true;
+    float zoom = 150.0f, x = 0.0f, y = 0.0f;
     while(running)
     {
         // Check for a quit event before passing to the GLWindow
@@ -61,8 +61,19 @@ int SDL_main(int argc, char** argv)
                     case SDLK_r: 
                         pause = false;
                         break;
+                    case SDLK_y: 
+                        theta += 1.0f;
+                        break;
+                    case SDLK_z: 
+                        phi += 1.0f;
+                        break;
                 }
             }
+            else if (e.type == SDL_MOUSEWHEEL)
+            {
+                // Check the scroll direction
+                zoom += e.wheel.y;                
+            }            
             else if(!window.handleEvent(e))
             {
                 running = false;
@@ -71,9 +82,9 @@ int SDL_main(int argc, char** argv)
         }
         alphaIncrement = alphaIncrement < 1.0f ? 1.0f : alphaIncrement;
         betaIncrement = betaIncrement <= alphaIncrement ? alphaIncrement + 1.0f : betaIncrement;
+        window.render(alpha, beta, theta, phi, zoom);
         if(!pause || alpha == 0.0f) // Only update alpha and beta if animation is running
-        {            
-            window.render(alpha, beta);
+        {                        
             alpha += alphaIncrement;
             beta += betaIncrement;
         }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <glm/gtc/type_ptr.hpp>
 #include "SDL.h"
+#include "stb_image.h"
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -144,92 +145,151 @@ void OpenGLWindow::initGL()
     glCullFace(GL_BACK);
     glClearColor(0,0,0,1);
 
-    
-    geometry.loadFromOBJFile("sphere-fixed.obj");
+    // Load the model that we want to use and buffer the vertex attributes
+    geometry.loadFromOBJFile("sphere-fixed.obj");    
+
     
 }
 
-void OpenGLWindow::render(float a, float b)
+void OpenGLWindow::render(float a, float b, float theta, float phi, float zoom)
 {
 
     glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    glBindVertexArray(vao);    
 
-    // Note that this path is relative to your working directory
-    // when running the program (IE if you run from within build
-    // then you need to place these files in build as well)
     shader = loadShaderProgram("simple.vert", "simple.frag");
     glUseProgram(shader);
 
+    // Calculate the view matrix for the camera
+    glm::vec3 cameraPosition = glm::vec3(10.0f * cos(glm::radians(theta)) * sin(glm::radians(phi)), 10.0f * sin(glm::radians(theta))* sin(glm::radians(phi)), 10.0f * cos(glm::radians(phi)));  // Adjust the position based on your preference
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, -1.0f);  // Target towards the center of the scene
+    glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);       // Up direction for the camera
+    glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
+    GLint viewLoc = glGetUniformLocation(shader, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+
     // Calculate the projection matrix (perspective projection)
-    float fov = glm::radians(145.0f);
+    float fov = glm::radians(zoom);
     float aspectRatio = 4.0f/3.0f; 
     float nearPlane = 0.1f;
     float farPlane = 100.0f;
     glm::mat4 projectionMatrix = glm::perspective(fov, aspectRatio, nearPlane, farPlane);
+    GLint projectionLoc = glGetUniformLocation(shader, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+    // Lighting and material properties
+    glm::vec3 lightPos = glm::vec3(1.2f * cos(glm::radians(theta)), 1.0f, 2.0f * sin(glm::radians(theta))); // Moving light
+    glm::vec3 lightAmbient(0.2f, 0.2f, 0.2f);
+    glm::vec3 lightDiffuse(0.5f, 0.5f, 0.5f);
+    glm::vec3 lightSpecular(1.0f, 1.0f, 1.0f);
     
-    // Load the model that we want to use and buffer the vertex attributes
-    
+    glm::vec3 materialAmbient(1.0f, 0.5f, 0.31f);
+    glm::vec3 materialDiffuse(1.0f, 0.5f, 0.31f);
+    glm::vec3 materialSpecular(0.5f, 0.5f, 0.5f);
+    float materialShininess = 32.0f;
+
+    glUniform3fv(glGetUniformLocation(shader, "light.position"), 1, glm::value_ptr(lightPos));
+    glUniform3fv(glGetUniformLocation(shader, "light.ambient"), 1, glm::value_ptr(lightAmbient));
+    glUniform3fv(glGetUniformLocation(shader, "light.diffuse"), 1, glm::value_ptr(lightDiffuse));
+    glUniform3fv(glGetUniformLocation(shader, "light.specular"), 1, glm::value_ptr(lightSpecular));
+
+    // Pass material information to shaders
+    glUniform3fv(glGetUniformLocation(shader, "material.ambient"), 1, glm::value_ptr(materialAmbient));
+    glUniform3fv(glGetUniformLocation(shader, "material.diffuse"), 1, glm::value_ptr(materialDiffuse));
+    glUniform3fv(glGetUniformLocation(shader, "material.specular"), 1, glm::value_ptr(materialSpecular));
+    glUniform1f(glGetUniformLocation(shader, "material.shininess"), materialShininess);
+
+    // Pass view position to shaders
+    glUniform3fv(glGetUniformLocation(shader, "viewPos"), 1, glm::value_ptr(cameraPosition));
     
     vertexCount = geometry.vertexCount();
-    // Get the location of the "position" attribute in the shader
-    GLuint vertexLoc = glGetAttribLocation(shader, "position");
-
-    // Positions for the Sun, Earth, and Moon respectively.
-    std::vector<glm::vec3> positions = {
-        glm::vec3(0.0f, 0.0f, -1.0f),
-        glm::vec3(2.3f*cos(glm::radians(a)), 2.3f*sin(glm::radians(a)), -1.0f),
-        glm::vec3(2.3f*cos(glm::radians(a)) + 0.7f*cos(glm::radians(b)), 2.3f*sin(glm::radians(a)) + 0.7f*sin(glm::radians(b)), -1.0f)
-    };
-
-    std::vector<glm::vec3> colors = {
-        glm::vec3(1.0f, 1.0f, 0.0f),    // Color of the Sun
-        glm::vec3(0.0f, 0.0f, 1.0f),    // Color of the Earth
-        glm::vec3(0.5f, 0.5f, 0.5f)     // Color of the Moon
-    };
-
-    std::vector<glm::vec3> scales = {
-    glm::vec3(0.7f, 0.7f, 0.7f),    // Scale factor for the Sun
-    glm::vec3(0.3f, 0.3f, 0.3f),    // Scale factor for the Earth
-    glm::vec3(0.1f, 0.1f, 0.1f),    // Scale factor for the Moon 
-    };
 
     glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);    
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    auto vertices = static_cast<float*>(geometry.vertexData());
-    
+    string images[3] = {"sun_texture.png", "earth_diffuse.png", "moon_diffuse.png"};
+    std::vector<GLuint> textures(3);
+    glGenTextures(3, textures.data()); 
+    for (int i = 0; i < 3; i++){
+               
+        glBindTexture(GL_TEXTURE_2D, textures[i]);  
+
+        int widthImg, heightImg, numColCh;
+        stbi_set_flip_vertically_on_load(true);
+        unsigned char* bytes = stbi_load(images[i].c_str(), &widthImg, &heightImg, &numColCh, 4);        
+        if (bytes)
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, widthImg, heightImg, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else
+        {
+            std::cout << "Failed to load texture" << std::endl;
+        }
+        stbi_image_free(bytes);
+
+        // Set the texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        
+    }
+
+    auto vertices = static_cast<float*>(geometry.vertexData());  
+    auto texCoords = static_cast<float*>(geometry.textureCoordData());
+    auto normals = static_cast<float*>(geometry.normalData());
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    for (int i = 0; i < positions.size(); ++i) {
+    int widthImg, heightImg, numColCh;       
+    
+    for (int i = 0; i < 3; ++i) {
+        glm::vec3 position, scale;
+        if (i == 0) {
+            position = glm::vec3(0.0f, 0.0f, -3.0f);
+            scale = glm::vec3(1.0f);
+        } else if (i == 1) {
+            position = glm::vec3(4.0f * cos(glm::radians(a)), 4.0f * sin(glm::radians(a)), -3.0f);
+            scale = glm::vec3(0.3f);
+        } else if (i == 2) {
+            position = glm::vec3(4.0f * cos(glm::radians(a)) + 1.5f * cos(glm::radians(b)), 4.0f * sin(glm::radians(a)) + 1.5f * sin(glm::radians(b)), -3.0f);
+            scale = glm::vec3(0.1f);
+        }        
 
-        std::vector<glm::vec3> transformedVertices;
-        transformedVertices.reserve(geometry.vertexCount());
+        std::vector<float> combinedData;
 
+        for (int j = 0; j < vertexCount; ++j) {
+            combinedData.push_back(vertices[j * 3]);
+            combinedData.push_back(vertices[j * 3 + 1]);
+            combinedData.push_back(vertices[j * 3 + 2]);
+            combinedData.push_back(texCoords[j * 2]);
+            combinedData.push_back(texCoords[j * 2 + 1]);
+            combinedData.push_back(normals[j * 3]);
+            combinedData.push_back(normals[j * 3 + 1]);
+            combinedData.push_back(normals[j * 3 + 2]);
+        }
+        
         // Calculate the view model matrix for each instance
-        glm::mat4 modelViewMatrix = glm::translate(glm::mat4(1.0f), positions[i]);
-        modelViewMatrix = glm::scale(modelViewMatrix, scales[i]);
-
-        // Combine view model and projection matrices
-        glm::mat4 modelViewProjection = projectionMatrix * modelViewMatrix;
-
-        // Set the object color
-        GLint colorLoc = glGetUniformLocation(shader, "objectColor");
-        glUniform3fv(colorLoc, 1, glm::value_ptr(colors[i]));
-
-        // Transform and buffer the vertex positions       
-        for (int j = 0; j < geometry.vertexCount(); ++j) {
-            glm::vec4 vertexPosition(vertices[j * 3], vertices[j * 3 + 1], vertices[j * 3 + 2]*-0.01f, 1.0f);
-            glm::vec4 transformedPosition = modelViewProjection * vertexPosition;
-            transformedVertices.push_back(glm::vec3(transformedPosition));
-        }  
+        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
+        modelMatrix = glm::scale(modelMatrix, scale);
+        GLint modelLoc = glGetUniformLocation(shader, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));      
         
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * transformedVertices.size(), transformedVertices.data(), GL_STATIC_DRAW);
-        // Specify the vertex attribute pointers
-        glVertexAttribPointer(vertexLoc, 3, GL_FLOAT, false, 0, 0);
-        glEnableVertexAttribArray(vertexLoc);       
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * combinedData.size(), combinedData.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);    
         
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3* sizeof(float)));
+        glEnableVertexAttribArray(1);
+
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+
+        glBindTexture(GL_TEXTURE_2D, textures[i]);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
         
     }   

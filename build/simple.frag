@@ -1,10 +1,45 @@
 #version 330 core
 
-uniform vec3 objectColor;
+in vec2 TexCoord; // Add an input variable for texture coordinates
+in vec3 FragPos;
+in vec3 Normal;
 
 out vec4 outColor;
 
+uniform sampler2D Texture;
+
+struct Material {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+
+struct Light {
+    vec3 position;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+uniform Material material;
+uniform Light light;
+uniform vec3 viewPos;
+
 void main()
 {
-    outColor = vec4(objectColor,1.0f);
+    vec3 ambient = light.ambient * material.ambient;
+
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(light.position - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = light.diffuse * (diff * material.diffuse);
+
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    vec3 specular = light.specular * (spec * material.specular);
+    
+    vec3 result = ambient + diffuse + specular;
+    outColor = texture(Texture, TexCoord) * vec4(result, 1.0);
 }

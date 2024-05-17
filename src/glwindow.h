@@ -9,9 +9,8 @@ class OpenGLWindow
 {
 public:
     OpenGLWindow();
-
     void initGL();
-    void render(float a, float b);
+    void render(float a, float b, float theta, float phi, float zoom);
     bool handleEvent(SDL_Event e);
     void cleanup();
 
